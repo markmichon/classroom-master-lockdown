@@ -6,29 +6,28 @@ module.exports = app => {
   // Your code here
   app.log('Yay, the app was loaded!')
 
-  app.on('issues.opened', async context => {
-    const issueComment = context.issue({
-      body: 'Thanks for opening this issue!',
-    })
-    return context.github.issues.createComment(issueComment)
-  })
-
-  app.on('pull_request.opened', async context => {})
-
-  app.on('repository.created', async context => {
+  app.on('repository_import', async context => {
     const { repository } = context.payload
-    let branches = context.github.repos.listBranches({
-      owner: repository.owner.login,
-      repo: repository.id,
+    if (context.payload.status !== 'success') {
+      return null
+    }
+    return context.github.request({
+      baseUrl: 'https://api.github.com',
+      url: `/repos/${repository.owner.login}/${
+        repository.name
+      }/branches/master/protection`,
+      method: 'PUT',
+      headers: {
+        accept: 'application/vnd.github.luke-cage-preview+json',
+      },
+      // @ts-ignore
+      required_status_checks: null,
+      enforce_admins: null,
+      restrictions: null,
+      required_pull_request_reviews: {
+        required_approving_review_count: 1,
+      },
     })
-    app.log(branches)
-    // return context.github.request(`PUT /repos/:owner/:branches/:branch/protection`, {
-    //   headers: {
-    //     accept: 'application/vnd.github.luke-cage-preview+json'
-    //   },
-
-    // })
-    app.log('Repo created!')
   })
 
   // For more information on building apps:
